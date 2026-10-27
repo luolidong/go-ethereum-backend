@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -41,7 +42,11 @@ func run(args []string) error {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	timeout := 30 * time.Second
+	if args[0] == "send" {
+		timeout = 5 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	client, err := ethclient.DialContext(ctx, rpcURL)
@@ -158,11 +163,19 @@ func sendEther(ctx context.Context, client *ethclient.Client, recipientText, amo
 	if err := client.SendTransaction(ctx, signedTransaction); err != nil {
 		return fmt.Errorf("send transaction: %w", err)
 	}
+	receipt, err := bind.WaitMined(ctx, client, signedTransaction)
+	if err != nil {
+		return fmt.Errorf("transaction %s was submitted but confirmation failed: %w", signedTransaction.Hash().Hex(), err)
+	}
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		return fmt.Errorf("transaction %s was mined but failed (block %d)", signedTransaction.Hash().Hex(), receipt.BlockNumber.Uint64())
+	}
 
 	fmt.Printf("From:           %s\n", sender.Hex())
 	fmt.Printf("To:             %s\n", recipient.Hex())
 	fmt.Printf("Amount:         %s ETH\n", amountText)
 	fmt.Printf("Transaction:    %s\n", signedTransaction.Hash().Hex())
+	fmt.Printf("Status:         confirmed in block %d\n", receipt.BlockNumber.Uint64())
 	return nil
 }
 

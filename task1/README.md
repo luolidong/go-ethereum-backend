@@ -34,7 +34,7 @@ Prints the block number, hash, timestamp, and transaction count.
 go run . send 0xRecipientAddress 0.001
 ```
 
-The final argument is the amount in ETH. The command signs and broadcasts the transaction, then prints its hash. Use only test ETH; sent transactions cannot be undone.
+The final argument is the amount in ETH. The command signs and broadcasts the transaction, waits up to five minutes for its receipt, and returns successfully only when the receipt status is successful. It prints the transaction hash and confirmed block number. A mined failed transaction or a confirmation timeout is returned as an error with the transaction hash. Use only test ETH; sent transactions cannot be undone.
 
 ## Run tests
 
